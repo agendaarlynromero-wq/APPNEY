@@ -50,6 +50,35 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (view === 'boot') setTimeout(() => setView('chats'), 2000);
+    
+    // Procesar invitación si viene en URL
+    const params = new URLSearchParams(window.location.search);
+    const inviteParam = params.get('invite');
+    
+    if (inviteParam) {
+      try {
+        const inviteData = JSON.parse(atob(inviteParam));
+        // No agregar si es el mismo usuario
+        if (inviteData.id !== profile.name) {
+          setContacts(prev => {
+            const exists = prev.some(c => c.id === inviteData.id);
+            if (exists) return prev;
+            return [...prev, {
+              id: inviteData.id,
+              name: inviteData.name,
+              avatar: inviteData.avatar,
+              bio: inviteData.bio || 'NODO_CONECTADO',
+              isOnline: true
+            }];
+          });
+          alert(`✓ ${inviteData.name} AGREGADO A CONTACTOS`);
+        }
+        // Limpiar URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (err) {
+        console.error('Error procesando invitación:', err);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -72,16 +101,23 @@ const App: React.FC = () => {
 
   const handleShare = async () => {
     vibrate(20);
+    const inviteData = btoa(JSON.stringify({
+      id: profile.name,
+      name: profile.name,
+      avatar: profile.avatar,
+      bio: profile.bio
+    }));
+    const inviteUrl = `${window.location.href}${window.location.href.includes('?') ? '&' : '?'}invite=${inviteData}`;
     const shareData = {
       title: 'NEY PAGER PRO',
       text: `Conéctate conmigo en mi red nodal NEY PAGER. Mi ID: ${profile.name}`,
-      url: window.location.href
+      url: inviteUrl
     };
     if (navigator.share) {
       try { await navigator.share(shareData); } catch (e) { /* user cancelled */ }
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert("URL_COPIADA_AL_PORTAPAPELES");
+      navigator.clipboard.writeText(inviteUrl);
+      alert("LINK_INVITACION_COPIADO");
     }
   };
 
@@ -176,14 +212,26 @@ const App: React.FC = () => {
             <div className="flex-1 flex flex-col p-4 gap-3 overflow-y-auto">
               <span className="config-label">NODOS_DISPONIBLES</span>
               {contacts.map(c => (
-                <div key={c.id} onClick={() => { vibrate(15); setActiveContact(c); setView('chat-detail'); }}
-                     className="flex items-center gap-4 p-4 border-2 border-black bg-black/5 active:bg-black active:text-white transition-all cursor-pointer">
-                  <img src={c.avatar} className="w-10 h-10 border-2 border-black pixel-img" />
-                  <div className="flex-1">
-                    <div className="font-black text-sm uppercase">{c.name}</div>
-                    <div className="text-[9px] opacity-70 uppercase truncate tracking-tighter">{c.bio}</div>
+                <div key={c.id} className="flex items-center gap-2 p-4 border-2 border-black bg-black/5 hover:bg-black/10 transition-all">
+                  <div onClick={() => { vibrate(15); setActiveContact(c); setView('chat-detail'); }}
+                       className="flex-1 flex items-center gap-4 cursor-pointer">
+                    <img src={c.avatar} className="w-10 h-10 border-2 border-black pixel-img" />
+                    <div className="flex-1">
+                      <div className="font-black text-sm uppercase">{c.name}</div>
+                      <div className="text-[9px] opacity-70 uppercase truncate tracking-tighter">{c.bio}</div>
+                    </div>
+                    <div className="text-[10px] opacity-30">▶</div>
                   </div>
-                  <div className="text-[10px] opacity-30">▶</div>
+                  {c.id !== 'bot-1' && (
+                    <button onClick={() => { 
+                      vibrate(20); 
+                      if (confirm(`¿Eliminar a ${c.name}?`)) {
+                        setContacts(contacts.filter(contact => contact.id !== c.id));
+                      }
+                    }} className="px-2 py-1 text-[9px] font-black border border-red-600 text-red-600 hover:bg-red-600/20">
+                      X
+                    </button>
+                  )}
                 </div>
               ))}
               <button onClick={handleShare} className="mt-auto bevel-out py-4 bg-black text-white flex items-center justify-center gap-2">
