@@ -1,62 +1,87 @@
 
-import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
+
+const groq = new Groq({
+  apiKey: import.meta.env.VITE_GROQ_API_KEY,
+});
 
 export const getBotResponse = async (userMessage: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: userMessage,
-      config: {
-        systemInstruction: "Eres NEY_CORE, un asistente técnico minimalista. Respuestas cortas, profesionales y en mayúsculas.",
-        tools: [{ googleSearch: {} }]
-      },
+    const response = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "Eres NEY_CORE, un asistente técnico minimalista. Respuestas cortas (máx 150 caracteres), profesionales y en mayúsculas."
+        },
+        {
+          role: "user",
+          content: userMessage
+        }
+      ],
+      model: "mixtral-8x7b-32768",
+      max_tokens: 256,
+      temperature: 0.7
     });
 
-    const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks
-      ?.filter(chunk => chunk.web)
-      .map(chunk => ({
-        title: chunk.web?.title || 'Source',
-        uri: chunk.web?.uri || ''
-      })) || [];
+    const text = response.choices[0]?.message?.content || "ERROR: TIMEOUT";
 
     return {
-      text: response.text || "ERROR: TIMEOUT",
-      sources: sources.length > 0 ? sources : undefined
+      text: text,
+      sources: undefined
     };
   } catch (error) {
+    console.error("Groq error:", error);
     return { text: "FATAL ERROR" };
   }
 };
 
 export const translateText = async (text: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Traduce esto al español (o inglés si ya está en español) de forma profesional y corta: ${text}`,
+    const response = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "Eres un traductor profesional. Traduce de forma concisa."
+        },
+        {
+          role: "user",
+          content: `Traduce esto al español (o inglés si ya está en español): ${text}`
+        }
+      ],
+      model: "mixtral-8x7b-32768",
+      max_tokens: 256,
+      temperature: 0.3
     });
-    return response.text;
-  } catch {
+
+    return response.choices[0]?.message?.content || "TRANS_ERROR";
+  } catch (error) {
+    console.error("Translation error:", error);
     return "TRANS_ERROR";
   }
 };
 
 export const generatePixelSticker = async (prompt: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [{ text: `Minimalist 1-bit style pixel icon, black and white, small scale: ${prompt}` }]
-      },
-      config: { imageConfig: { aspectRatio: "1:1" } }
+    const response = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "Eres un generador de emoji. Responde SOLO con 1-2 emoji relevantes, sin texto adicional."
+        },
+        {
+          role: "user",
+          content: `Crea emoji pixel art para: ${prompt}`
+        }
+      ],
+      model: "mixtral-8x7b-32768",
+      max_tokens: 50,
+      temperature: 0.8
     });
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-    }
-    return null;
-  } catch {
-    return null;
+
+    const emoji = response.choices[0]?.message?.content?.trim() || "👾";
+    return emoji;
+  } catch (error) {
+    console.error("Sticker generation error:", error);
+    return "👾";
   }
 };
