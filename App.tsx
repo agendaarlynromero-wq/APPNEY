@@ -52,41 +52,37 @@ const App: React.FC = () => {
     if (view === 'boot') setTimeout(() => setView('chats'), 2000);
   }, []);
 
-  // Procesar invitación DESPUÉS de que profile cargue
+  // Procesar invitación - funciona incluso con profile nuevo
   useEffect(() => {
-    if (profile.name === 'USER_NEW') {
-      console.log('⏳ Esperando a que profile cargue...');
-      return;
-    }
-    
     const params = new URLSearchParams(window.location.search);
     const inviteParam = params.get('invite');
     
     console.log('🔍 Buscando parámetro invite...');
     console.log('URL Search:', window.location.search);
+    console.log('Tu perfil actual:', profile.name);
     
     if (inviteParam) {
       try {
         console.log('🔓 Decodificando invitación...');
         const inviteData = JSON.parse(atob(inviteParam));
-        console.log('📦 Datos:', inviteData);
-        console.log('Tu perfil:', profile.name);
+        console.log('📦 Datos decodificados:', inviteData);
         
-        if (inviteData.id === profile.name) {
+        // Solo evitar agregar a ti mismo si el profile no es nuevo
+        if (profile.name !== 'USER_NEW' && inviteData.id === profile.name) {
           console.log('⚠️ No puedes agregarte a ti mismo');
           window.history.replaceState({}, document.title, window.location.pathname);
           return;
         }
         
         if (!inviteData.id || !inviteData.name) {
-          console.error('❌ Datos inválidos');
+          console.error('❌ Datos inválidos en invitación');
           return;
         }
         
         setContacts(prev => {
           const exists = prev.some(c => c.id === inviteData.id);
           if (exists) {
-            console.log('✓ Contacto ya existe');
+            console.log('✓ Contacto ya existe, sin duplicar');
             return prev;
           }
           const newContact: Contact = {
@@ -96,18 +92,19 @@ const App: React.FC = () => {
             bio: inviteData.bio || 'NODO_CONECTADO',
             isOnline: true
           };
-          console.log('✅ Agregado:', newContact);
-          alert(`✓ ${inviteData.name.toUpperCase()} AGREGADO A CONTACTOS`);
+          console.log('✅ Nuevo contacto agregado:', newContact);
+          alert(`✓ ${inviteData.name.toUpperCase()} AGREGADO A TUS CONTACTOS`);
           return [...prev, newContact];
         });
         
+        // Limpiar URL para no reprocesar
         window.history.replaceState({}, document.title, window.location.pathname);
       } catch (err) {
-        console.error('🔥 Error:', err);
+        console.error('🔥 Error al procesar invitación:', err);
         alert(`❌ Error: ${err instanceof Error ? err.message : 'desconocido'}`);
       }
     }
-  }, [profile.name]);
+  }, [profile.name, contacts]);
 
   useEffect(() => {
     localStorage.setItem('ney_v13_profile', JSON.stringify(profile));
