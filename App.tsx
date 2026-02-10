@@ -54,39 +54,57 @@ const App: React.FC = () => {
 
   // Procesar invitación DESPUÉS de que profile cargue
   useEffect(() => {
-    if (profile.name === 'USER_NEW') return; // Esperar a que profile se cargue
+    if (profile.name === 'USER_NEW') {
+      console.log('⏳ Esperando a que profile cargue...');
+      return;
+    }
     
     const params = new URLSearchParams(window.location.search);
     const inviteParam = params.get('invite');
     
+    console.log('🔍 Buscando parámetro invite...');
+    console.log('URL Search:', window.location.search);
+    
     if (inviteParam) {
       try {
+        console.log('🔓 Decodificando invitación...');
         const inviteData = JSON.parse(atob(inviteParam));
-        // No agregar si es el mismo usuario
-        if (inviteData.id !== profile.name && inviteData.id && inviteData.name) {
-          setContacts(prev => {
-            const exists = prev.some(c => c.id === inviteData.id);
-            if (exists) {
-              console.log('✓ Contacto ya existe');
-              return prev;
-            }
-            const newContact: Contact = {
-              id: inviteData.id,
-              name: inviteData.name,
-              avatar: inviteData.avatar || 'https://api.dicebear.com/7.x/pixel-art/svg?seed=nodo&backgroundColor=ffffff',
-              bio: inviteData.bio || 'NODO_CONECTADO',
-              isOnline: true
-            };
-            console.log('✅ Contacto agregado:', newContact);
-            alert(`✓ ${inviteData.name} AGREGADO A CONTACTOS`);
-            return [...prev, newContact];
-          });
+        console.log('📦 Datos:', inviteData);
+        console.log('Tu perfil:', profile.name);
+        
+        if (inviteData.id === profile.name) {
+          console.log('⚠️ No puedes agregarte a ti mismo');
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return;
         }
-        // Limpiar URL
+        
+        if (!inviteData.id || !inviteData.name) {
+          console.error('❌ Datos inválidos');
+          return;
+        }
+        
+        setContacts(prev => {
+          const exists = prev.some(c => c.id === inviteData.id);
+          if (exists) {
+            console.log('✓ Contacto ya existe');
+            return prev;
+          }
+          const newContact: Contact = {
+            id: inviteData.id,
+            name: inviteData.name,
+            avatar: inviteData.avatar || 'https://api.dicebear.com/7.x/pixel-art/svg?seed=nodo&backgroundColor=ffffff',
+            bio: inviteData.bio || 'NODO_CONECTADO',
+            isOnline: true
+          };
+          console.log('✅ Agregado:', newContact);
+          alert(`✓ ${inviteData.name.toUpperCase()} AGREGADO A CONTACTOS`);
+          return [...prev, newContact];
+        });
+        
         window.history.replaceState({}, document.title, window.location.pathname);
       } catch (err) {
-        console.error('Error procesando invitación:', err);
-        alert('❌ Error al procesar invitación');
+        console.error('🔥 Error:', err);
+        alert(`❌ Error: ${err instanceof Error ? err.message : 'desconocido'}`);
       }
     }
   }, [profile.name]);
@@ -111,23 +129,35 @@ const App: React.FC = () => {
 
   const handleShare = async () => {
     vibrate(20);
-    const inviteData = btoa(JSON.stringify({
-      id: profile.name,
-      name: profile.name,
-      avatar: profile.avatar,
-      bio: profile.bio
-    }));
-    const inviteUrl = `${window.location.href}${window.location.href.includes('?') ? '&' : '?'}invite=${inviteData}`;
-    const shareData = {
-      title: 'NEY PAGER PRO',
-      text: `Conéctate conmigo en mi red nodal NEY PAGER. Mi ID: ${profile.name}`,
-      url: inviteUrl
-    };
-    if (navigator.share) {
-      try { await navigator.share(shareData); } catch (e) { /* user cancelled */ }
-    } else {
-      navigator.clipboard.writeText(inviteUrl);
-      alert("LINK_INVITACION_COPIADO");
+    try {
+      const inviteData = btoa(JSON.stringify({
+        id: profile.name,
+        name: profile.name,
+        avatar: profile.avatar,
+        bio: profile.bio
+      }));
+      const baseUrl = window.location.origin + window.location.pathname;
+      const inviteUrl = `${baseUrl}?invite=${inviteData}`;
+      
+      console.log('📤 Generando link de invitación:');
+      console.log('Base URL:', baseUrl);
+      console.log('Link completo:', inviteUrl);
+      
+      const shareData = {
+        title: 'NEY PAGER PRO',
+        text: `Conéctate conmigo en mi red nodal NEY PAGER. Mi ID: ${profile.name}`,
+        url: inviteUrl
+      };
+      
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(inviteUrl);
+        alert(`✓ LINK COPIADO:\n\n${inviteUrl}\n\nPégalo en otra pestaña`);
+      }
+    } catch (err) {
+      console.error('Error en handleShare:', err);
+      alert('❌ Error al generar link');
     }
   };
 
