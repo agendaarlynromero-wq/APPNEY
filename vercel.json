@@ -2,11 +2,5 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "framework": "vite",
-  "env": [
-    {
-      "key": "VITE_GROQ_API_KEY",
-      "description": "Groq API Key - Get it from https://console.groq.com/keys"
-    }
-  ]
+  "framework": "vite"
 }
