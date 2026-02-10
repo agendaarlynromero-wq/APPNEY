@@ -1,9 +1,23 @@
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+
+const getApiKey = () => {
+  const key = import.meta.env.VITE_GROQ_API_KEY;
+  if (!key || key === 'undefined' || key.includes('your_')) {
+    console.warn('⚠️ GROQ API KEY NO CONFIGURADA. Agrega tu clave en .env.local');
+    return null;
+  }
+  return key;
+};
 
 export const getBotResponse = async (userMessage: string) => {
+  const GROQ_API_KEY = getApiKey();
+  if (!GROQ_API_KEY) {
+    return { text: "❌ ERROR: API KEY NO CONFIGURADA. Verifica .env.local" };
+  }
+
   try {
+    console.log('📤 Enviando a Groq...');
     const response = await fetch(GROQ_API_URL, {
       method: "POST",
       headers: {
@@ -15,36 +29,42 @@ export const getBotResponse = async (userMessage: string) => {
         messages: [
           {
             role: "system",
-            content: "Eres NEY_CORE, un asistente técnico minimalista. Respuestas cortas (máx 150 caracteres), profesionales y en mayúsculas."
+            content: "Eres NEY_CORE, un asistente técnico minimalista. Respuestas cortas (máx 100 caracteres), profesionales y en mayúsculas."
           },
           {
             role: "user",
             content: userMessage
           }
         ],
-        max_tokens: 256,
+        max_tokens: 200,
         temperature: 0.7
       })
     });
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Groq Error:', response.status, errorText);
+      return { text: `❌ ERROR_${response.status}: LA_IA_NO_RESPONDE` };
     }
 
     const data = await response.json();
-    const text = data.choices?.[0]?.message?.content || "ERROR: TIMEOUT";
+    console.log('✅ Respuesta de Groq:', data);
+    const text = data.choices?.[0]?.message?.content?.trim() || "ERROR: TIMEOUT";
 
     return {
-      text: text,
+      text: text.toUpperCase(),
       sources: undefined
     };
   } catch (error) {
-    console.error("Groq error:", error);
-    return { text: "FATAL ERROR" };
+    console.error("🔥 Groq error:", error);
+    return { text: `❌ CONEXION_ERROR: ${error instanceof Error ? error.message : 'DESCONOCIDO'}` };
   }
 };
 
 export const translateText = async (text: string) => {
+  const GROQ_API_KEY = getApiKey();
+  if (!GROQ_API_KEY) return "❌ ERROR: API KEY";
+
   try {
     const response = await fetch(GROQ_API_URL, {
       method: "POST",
@@ -57,20 +77,20 @@ export const translateText = async (text: string) => {
         messages: [
           {
             role: "system",
-            content: "Eres un traductor profesional. Traduce de forma concisa."
+            content: "Eres un traductor profesional. Responde SOLO con el texto traducido, sin explicaciones."
           },
           {
             role: "user",
-            content: `Traduce esto al español (o inglés si ya está en español): ${text}`
+            content: `Traduce al español (o inglés si ya está en español): ${text}`
           }
         ],
-        max_tokens: 256,
+        max_tokens: 200,
         temperature: 0.3
       })
     });
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || "TRANS_ERROR";
+    return data.choices?.[0]?.message?.content?.trim() || "TRANS_ERROR";
   } catch (error) {
     console.error("Translation error:", error);
     return "TRANS_ERROR";
@@ -78,6 +98,9 @@ export const translateText = async (text: string) => {
 };
 
 export const generatePixelSticker = async (prompt: string) => {
+  const GROQ_API_KEY = getApiKey();
+  if (!GROQ_API_KEY) return "👾";
+
   try {
     const response = await fetch(GROQ_API_URL, {
       method: "POST",
@@ -90,14 +113,14 @@ export const generatePixelSticker = async (prompt: string) => {
         messages: [
           {
             role: "system",
-            content: "Eres un generador de emoji. Responde SOLO con 1-2 emoji relevantes, sin texto adicional."
+            content: "Eres un generador de emoji. Responde SOLO con 1-2 emoji de pixel art relevantes, sin texto adicional."
           },
           {
             role: "user",
-            content: `Crea emoji pixel art para: ${prompt}`
+            content: `Genera emoji para: ${prompt}`
           }
         ],
-        max_tokens: 50,
+        max_tokens: 30,
         temperature: 0.8
       })
     });

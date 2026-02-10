@@ -50,8 +50,12 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (view === 'boot') setTimeout(() => setView('chats'), 2000);
+  }, []);
+
+  // Procesar invitación DESPUÉS de que profile cargue
+  useEffect(() => {
+    if (profile.name === 'USER_NEW') return; // Esperar a que profile se cargue
     
-    // Procesar invitación si viene en URL
     const params = new URLSearchParams(window.location.search);
     const inviteParam = params.get('invite');
     
@@ -59,27 +63,33 @@ const App: React.FC = () => {
       try {
         const inviteData = JSON.parse(atob(inviteParam));
         // No agregar si es el mismo usuario
-        if (inviteData.id !== profile.name) {
+        if (inviteData.id !== profile.name && inviteData.id && inviteData.name) {
           setContacts(prev => {
             const exists = prev.some(c => c.id === inviteData.id);
-            if (exists) return prev;
-            return [...prev, {
+            if (exists) {
+              console.log('✓ Contacto ya existe');
+              return prev;
+            }
+            const newContact: Contact = {
               id: inviteData.id,
               name: inviteData.name,
-              avatar: inviteData.avatar,
+              avatar: inviteData.avatar || 'https://api.dicebear.com/7.x/pixel-art/svg?seed=nodo&backgroundColor=ffffff',
               bio: inviteData.bio || 'NODO_CONECTADO',
               isOnline: true
-            }];
+            };
+            console.log('✅ Contacto agregado:', newContact);
+            alert(`✓ ${inviteData.name} AGREGADO A CONTACTOS`);
+            return [...prev, newContact];
           });
-          alert(`✓ ${inviteData.name} AGREGADO A CONTACTOS`);
         }
         // Limpiar URL
         window.history.replaceState({}, document.title, window.location.pathname);
       } catch (err) {
         console.error('Error procesando invitación:', err);
+        alert('❌ Error al procesar invitación');
       }
     }
-  }, []);
+  }, [profile.name]);
 
   useEffect(() => {
     localStorage.setItem('ney_v13_profile', JSON.stringify(profile));
@@ -131,10 +141,21 @@ const App: React.FC = () => {
 
     if (activeContact.id === 'bot-1' && params.text) {
       setIsTyping(true);
+      console.log('📤 Enviando al bot:', params.text);
       const res = await getBotResponse(params.text);
       setIsTyping(false);
-      vibrate([30, 50, 30]); // Vibración de mensaje recibido
-      const botMsg: Message = { id: (Date.now()+1).toString(), senderId: 'bot-1', text: res.text.toUpperCase(), sources: res.sources, timestamp: Date.now(), status: 'read' };
+      vibrate([30, 50, 30]);
+      
+      // Validar que la respuesta no sea un error
+      const responseText = res.text || "ERROR: SIN RESPUESTA";
+      
+      const botMsg: Message = { 
+        id: (Date.now()+1).toString(), 
+        senderId: 'bot-1', 
+        text: responseText.toUpperCase(), 
+        timestamp: Date.now(), 
+        status: 'read' 
+      };
       setMessages(prev => ({ ...prev, [activeContact.id]: [...(prev[activeContact.id] || []), botMsg] }));
     }
   };
