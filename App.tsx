@@ -128,36 +128,56 @@ const App: React.FC = () => {
   };
 
   const handleShare = async () => {
+    console.log('🎯 handleShare triggered');
     vibrate(20);
+    
     try {
-      const inviteData = btoa(JSON.stringify({
+      console.log('📋 Profile data:', { name: profile.name, bio: profile.bio, avatar: profile.avatar?.substring(0, 50) });
+      
+      if (!profile.name || profile.name === 'USER_NEW') {
+        alert('❌ Error: Primero edita tu perfil en la sección ID');
+        return;
+      }
+      
+      const invitePayload = {
         id: profile.name,
         name: profile.name,
         avatar: profile.avatar,
         bio: profile.bio
-      }));
-      const baseUrl = window.location.origin + window.location.pathname;
-      const inviteUrl = `${baseUrl}?invite=${inviteData}`;
-      
-      console.log('📤 Generando link de invitación:');
-      console.log('Base URL:', baseUrl);
-      console.log('Link completo:', inviteUrl);
-      
-      const shareData = {
-        title: 'NEY PAGER PRO',
-        text: `Conéctate conmigo en mi red nodal NEY PAGER. Mi ID: ${profile.name}`,
-        url: inviteUrl
       };
       
+      console.log('1️⃣ Payload:', invitePayload);
+      
+      const jsonStr = JSON.stringify(invitePayload);
+      console.log('2️⃣ JSON string:', jsonStr);
+      
+      const inviteData = btoa(jsonStr);
+      console.log('3️⃣ Base64 encoded:', inviteData.substring(0, 50) + '...');
+      
+      const baseUrl = window.location.origin + window.location.pathname;
+      console.log('4️⃣ Base URL:', baseUrl);
+      
+      const inviteUrl = `${baseUrl}?invite=${inviteData}`;
+      console.log('5️⃣ Full invitación URL:', inviteUrl);
+      
       if (navigator.share) {
-        await navigator.share(shareData);
+        console.log('6️⃣ Usando Web Share API');
+        await navigator.share({
+          title: 'NEY PAGER PRO',
+          text: `Conéctate conmigo. Mi ID: ${profile.name}`,
+          url: inviteUrl
+        });
+        console.log('✅ Compartido exitosamente');
       } else {
+        console.log('6️⃣ Usando Clipboard API');
         await navigator.clipboard.writeText(inviteUrl);
-        alert(`✓ LINK COPIADO:\n\n${inviteUrl}\n\nPégalo en otra pestaña`);
+        console.log('✅ Copiado al portapapeles');
+        alert(`✓ LINK COPIADO:\n\n${inviteUrl.substring(0, 60)}...\n\nPégalo en otra pestaña`);
       }
     } catch (err) {
-      console.error('Error en handleShare:', err);
-      alert('❌ Error al generar link');
+      console.error('🔥 Error detallado:', err);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      alert(`❌ Error: ${errorMsg}`);
     }
   };
 
