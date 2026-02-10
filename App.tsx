@@ -132,7 +132,7 @@ const App: React.FC = () => {
     vibrate(20);
     
     try {
-      console.log('📋 Profile data:', { name: profile.name, bio: profile.bio, avatar: profile.avatar?.substring(0, 50) });
+      console.log('📋 Profile data:', { name: profile.name, bio: profile.bio });
       
       if (!profile.name || profile.name === 'USER_NEW') {
         alert('❌ Error: Primero edita tu perfil en la sección ID');
@@ -158,26 +158,24 @@ const App: React.FC = () => {
       console.log('4️⃣ Base URL:', baseUrl);
       
       const inviteUrl = `${baseUrl}?invite=${inviteData}`;
-      console.log('5️⃣ Full invitación URL:', inviteUrl);
+      console.log('5️⃣ Full invitación URL:', inviteUrl.substring(0, 80) + '...');
       
-      if (navigator.share) {
-        console.log('6️⃣ Usando Web Share API');
-        await navigator.share({
-          title: 'NEY PAGER PRO',
-          text: `Conéctate conmigo. Mi ID: ${profile.name}`,
-          url: inviteUrl
-        });
-        console.log('✅ Compartido exitosamente');
-      } else {
+      // Usar Clipboard directamente (más confiable que Web Share API en localhost)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
         console.log('6️⃣ Usando Clipboard API');
         await navigator.clipboard.writeText(inviteUrl);
         console.log('✅ Copiado al portapapeles');
-        alert(`✓ LINK COPIADO:\n\n${inviteUrl.substring(0, 60)}...\n\nPégalo en otra pestaña`);
+        alert(`✓ LINK COPIADO Y LISTO PARA COMPARTIR\n\nPégalo en:\n- Otra pestaña\n- WhatsApp\n- Email\n\nAl recibir el link, se agregará como contacto automáticamente`);
+      } else {
+        // Fallback: mostrar link en textarea
+        console.log('6️⃣ Fallback: Mostrando link en alerta');
+        alert(`LINK DE INVITACIÓN:\n\n${inviteUrl}\n\nCópialo y comparte`);
       }
     } catch (err) {
       console.error('🔥 Error detallado:', err);
       const errorMsg = err instanceof Error ? err.message : String(err);
-      alert(`❌ Error: ${errorMsg}`);
+      console.log('Tipo de error:', err instanceof Error ? err.name : typeof err);
+      alert(`❌ Error: ${errorMsg}\n\nReintenta`);
     }
   };
 
