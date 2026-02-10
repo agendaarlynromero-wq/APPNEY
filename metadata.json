@@ -1,0 +1,30 @@
+
+{
+  "name": "NEY PAGER PRO",
+  "short_name": "NEY PAGER",
+  "description": "Sistema de Mensajería Retro con IA y Red Nodal.",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0d",
+  "theme_color": "#d4e09b",
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/pixel-art/png?seed=ney&backgroundColor=d4e09b&size=192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/pixel-art/png?seed=ney&backgroundColor=d4e09b&size=512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
